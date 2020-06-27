@@ -11,6 +11,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/dougfort/swarkn/config"
 	"github.com/dougfort/swarkn/servehttp"
 )
 
@@ -19,18 +20,28 @@ var build = "develop"
 
 func main() {
 	logger := zerolog.New(os.Stdout).
-		Level(zerolog.DebugLevel).
 		With().Timestamp().Str("service", "swarkn").Logger()
 
-	if err := run(logger); err != nil {
+	cfg, err := config.LoadServerConfig()
+	if err != nil {
+		logger.Error().AnErr("LoadServerConfig", err).Msg("error loading config")
+		os.Exit(1)
+	}
+
+	if err := run(logger, cfg); err != nil {
 		logger.Error().AnErr("main", err).Msg("exit with error")
 		os.Exit(1)
 	}
 }
 
-func run(logger zerolog.Logger) error {
-	logger.Info().Msg("program starts)")
+func run(logger zerolog.Logger, cfg config.ServerConfig) error {
+	logLevel := zerolog.InfoLevel
+	if cfg.LogLevel == "debug" {
+		logLevel = zerolog.DebugLevel
+	}
+	logger = logger.Level(logLevel)
 
+	logger.Info().Str("loglevel", cfg.LogLevel).Msg("program starts")
 	defer logger.Info().Msg("program exits)")
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -45,7 +56,7 @@ func run(logger zerolog.Logger) error {
 	serverErrors := make(chan error, 1)
 
 	logger.Info().Msg("serving http")
-	go servehttp.Serve(ctx, logger, serverErrors)
+	go servehttp.Serve(ctx, logger, cfg, serverErrors)
 
 	// Blocking main and waiting for shutdown.
 	select {

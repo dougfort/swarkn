@@ -9,12 +9,18 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog"
+
+	"github.com/dougfort/swarkn/config"
 )
 
-func Serve(ctx context.Context, logger zerolog.Logger, serverErrors chan<- error) {
+func Serve(
+	ctx context.Context,
+	logger zerolog.Logger,
+	cfg config.ServerConfig,
+	serverErrors chan<- error,
+) {
 	const serverName = "http"
-	// TODO: get port from env/cli
-	const port = 3000
+
 	const hello = "Hello World!"
 
 	logger = logger.With().Str("server", serverName).Logger()
@@ -46,7 +52,7 @@ func Serve(ctx context.Context, logger zerolog.Logger, serverErrors chan<- error
 		}
 	}
 
-	addr := fmt.Sprintf("0.0.0.0:%d", port)
+	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 	logger.Info().Msgf("listening on: %s", addr)
 	server := http.Server{Addr: addr, Handler: http.HandlerFunc(handler)}
 
